@@ -1,0 +1,192 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMbBafaw8vSBzJdfxzjsbvu",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Twaritapole/-Chatbot-using-NLP/blob/main/%20Chatbot%20using%20NLP\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "pip install nltk scikit-learn\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "z7i0xAHG-_Om",
+        "outputId": "1ed08ea8-cef1-4955-cb8e-6cb0bf1ece1f"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: nltk in /usr/local/lib/python3.10/dist-packages (3.9.1)\n",
+            "Requirement already satisfied: scikit-learn in /usr/local/lib/python3.10/dist-packages (1.5.2)\n",
+            "Requirement already satisfied: click in /usr/local/lib/python3.10/dist-packages (from nltk) (8.1.7)\n",
+            "Requirement already satisfied: joblib in /usr/local/lib/python3.10/dist-packages (from nltk) (1.4.2)\n",
+            "Requirement already satisfied: regex>=2021.8.3 in /usr/local/lib/python3.10/dist-packages (from nltk) (2024.9.11)\n",
+            "Requirement already satisfied: tqdm in /usr/local/lib/python3.10/dist-packages (from nltk) (4.66.6)\n",
+            "Requirement already satisfied: numpy>=1.19.5 in /usr/local/lib/python3.10/dist-packages (from scikit-learn) (1.26.4)\n",
+            "Requirement already satisfied: scipy>=1.6.0 in /usr/local/lib/python3.10/dist-packages (from scikit-learn) (1.13.1)\n",
+            "Requirement already satisfied: threadpoolctl>=3.1.0 in /usr/local/lib/python3.10/dist-packages (from scikit-learn) (3.5.0)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 3,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2TjGTzZ4-7XT",
+        "outputId": "b8c636cf-9181-4c2b-a9f3-db47bcea5ee9"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[nltk_data] Downloading package punkt to /root/nltk_data...\n",
+            "[nltk_data]   Package punkt is already up-to-date!\n",
+            "[nltk_data] Downloading package stopwords to /root/nltk_data...\n",
+            "[nltk_data]   Package stopwords is already up-to-date!\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Hello! I'm your chatbot. Type 'bye' to exit.\n",
+            "You: Hi\n",
+            "Chatbot: Greetings!\n",
+            "You: Who are you?\n",
+            "Chatbot: Hi there!\n",
+            "You: Who are you?\n",
+            "Chatbot: Hello!\n",
+            "You: How old are you?\n",
+            "Chatbot: I'm timeless!\n",
+            "You: Is it raining?\n",
+            "Chatbot: I don't have real-time weather updates, but check your local weather app.\n",
+            "You: can you help me?\n",
+            "Chatbot: Sure! How can I help?\n",
+            "You: bye\n",
+            "Chatbot: Goodbye! Take care!\n"
+          ]
+        }
+      ],
+      "source": [
+        "import nltk\n",
+        "import numpy as np\n",
+        "import random\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "from sklearn.naive_bayes import MultinomialNB\n",
+        "from sklearn.pipeline import make_pipeline\n",
+        "from sklearn.preprocessing import LabelEncoder\n",
+        "import json\n",
+        "import string\n",
+        "\n",
+        "# NLTK setup\n",
+        "nltk.download('punkt')\n",
+        "nltk.download('stopwords')\n",
+        "\n",
+        "# Define training data\n",
+        "intents = {\n",
+        "    \"intents\": [\n",
+        "        {\"intent\": \"greeting\", \"patterns\": [\"Hi\", \"Hello\", \"Hey\", \"Howdy\"], \"responses\": [\"Hello!\", \"Hi there!\", \"Greetings!\"]},\n",
+        "        {\"intent\": \"goodbye\", \"patterns\": [\"Bye\", \"Goodbye\", \"See you later\"], \"responses\": [\"Goodbye!\", \"Take care!\", \"See you later!\"]},\n",
+        "        {\"intent\": \"name\", \"patterns\": [\"What is your name?\", \"Who are you?\"], \"responses\": [\"I am a chatbot created to assist you.\", \"I'm a bot created to help you!\"]},\n",
+        "        {\"intent\": \"age\", \"patterns\": [\"How old are you?\", \"What is your age?\"], \"responses\": [\"I don't have an age, I'm just a bot!\", \"I'm timeless!\"]},\n",
+        "        {\"intent\": \"weather\", \"patterns\": [\"What's the weather like?\", \"Is it raining?\", \"How's the weather today?\"], \"responses\": [\"I don't have real-time weather updates, but check your local weather app.\"]},\n",
+        "        {\"intent\": \"help\", \"patterns\": [\"Can you help me?\", \"I need assistance\", \"Help me out\", \"Support please\"], \"responses\": [\"Sure! How can I help?\", \"I'm here to assist you!\"]}\n",
+        "    ]\n",
+        "}\n",
+        "\n",
+        "# Preprocess the data\n",
+        "def preprocess_data(intents):\n",
+        "    # Extract patterns and responses\n",
+        "    patterns = []\n",
+        "    responses = []\n",
+        "    labels = []\n",
+        "\n",
+        "    for intent in intents[\"intents\"]:\n",
+        "        for pattern in intent[\"patterns\"]:\n",
+        "            patterns.append(pattern)\n",
+        "            responses.append(intent[\"responses\"])\n",
+        "            labels.append(intent[\"intent\"])\n",
+        "\n",
+        "    return patterns, responses, labels\n",
+        "\n",
+        "patterns, responses, labels = preprocess_data(intents)\n",
+        "\n",
+        "# Encode the labels\n",
+        "label_encoder = LabelEncoder()\n",
+        "labels = label_encoder.fit_transform(labels)\n",
+        "\n",
+        "# TF-IDF Vectorizer and Naive Bayes classifier pipeline\n",
+        "model = make_pipeline(TfidfVectorizer(stop_words='english'), MultinomialNB())\n",
+        "\n",
+        "# Train the model\n",
+        "model.fit(patterns, labels)\n",
+        "\n",
+        "# Function to get the response based on the predicted intent\n",
+        "def get_response(user_input):\n",
+        "    # Predict the intent\n",
+        "    predicted_label = model.predict([user_input])[0]\n",
+        "    intent = label_encoder.inverse_transform([predicted_label])[0]\n",
+        "\n",
+        "    # Select a random response from the corresponding intent\n",
+        "    intent_responses = next(intent_obj[\"responses\"] for intent_obj in intents[\"intents\"] if intent_obj[\"intent\"] == intent)\n",
+        "    return random.choice(intent_responses)\n",
+        "\n",
+        "# Function to clean and process input (tokenization, removing punctuation)\n",
+        "def clean_input(text):\n",
+        "    text = text.lower()\n",
+        "    text = ''.join([char for char in text if char not in string.punctuation])\n",
+        "    return text\n",
+        "\n",
+        "# Start the chatbot\n",
+        "def chat():\n",
+        "    print(\"Hello! I'm your chatbot. Type 'bye' to exit.\")\n",
+        "    while True:\n",
+        "        user_input = input(\"You: \")\n",
+        "        user_input = clean_input(user_input)\n",
+        "\n",
+        "        if user_input.lower() in ['bye', 'goodbye']:\n",
+        "            print(\"Chatbot: Goodbye! Take care!\")\n",
+        "            break\n",
+        "\n",
+        "        response = get_response(user_input)\n",
+        "        print(\"Chatbot:\", response)\n",
+        "\n",
+        "if __name__ == \"__main__\":\n",
+        "    chat()\n"
+      ]
+    }
+  ]
+}
